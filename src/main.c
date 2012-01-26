@@ -259,6 +259,9 @@ static void BarMainPrintTime (BarApp_t *app) {
 			songRemaining / 60, songRemaining % 60,
 			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR / 60,
 			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR % 60);
+	BarUiStartEventCmd (&app->settings, "songduration",
+				app->curStation, app->playlist, &app->player, app->ph.stations,
+				PIANO_RET_OK, WAITRESS_RET_OK);
 }
 
 /*	main loop
