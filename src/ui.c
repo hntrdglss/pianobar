@@ -720,14 +720,14 @@ inline void BarUiPrintStation (const BarSettings_t *settings,
 inline void BarUiPrintSong (const BarSettings_t *settings,
 		const PianoSong_t *song, const PianoStation_t *station) {
 	char outstr[512];
-	const char *vals[] = {song->title, song->artist, song->album,
+	const char *vals[] = {song->musicId, song->title, song->artist, song->album,
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? settings->atIcon : "",
 			station != NULL ? station->name : "",
 			song->detailUrl};
 
 	BarUiCustomFormat (outstr, sizeof (outstr), settings->npSongFormat,
-			"talr@su", vals);
+			"mtalr@su", vals);
 	BarUiAppendNewline (outstr, sizeof (outstr));
 	BarUiMsg (settings, MSG_PLAYING, outstr);
 }

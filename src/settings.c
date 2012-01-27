@@ -126,7 +126,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->loveIcon = strdup (" <3");
 	settings->banIcon = strdup (" </3");
 	settings->atIcon = strdup (" @ ");
-	settings->npSongFormat = strdup ("\"%t\" by \"%a\" on \"%l\"%r%@%s");
+	settings->npSongFormat = strdup ("(%m) \"%t\" by \"%a\" on \"%l\"%r%@%s");
 	settings->npStationFormat = strdup ("Station \"%n\" (%i)");
 	settings->listSongFormat = strdup ("%i) %a - %t%r");
 	settings->fifo = malloc (PATH_MAX * sizeof (*settings->fifo));
