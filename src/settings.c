@@ -132,6 +132,10 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->npStationFormat = strdup ("Station \"%n\" (%i)");
 	settings->listSongFormat = strdup ("%i) %a - %t%r");
 	settings->fifo = malloc (PATH_MAX * sizeof (*settings->fifo));
+	settings->socketEnabled = false;
+	settings->socketIP = strdup("127.0.0.1");
+	settings->socketPort = 1234;
+	settings->socketMyDeviceName = strdup("localhost");
 	BarGetXdgConfigDir (PACKAGE "/ctl", settings->fifo, PATH_MAX);
 	memcpy (settings->tlsFingerprint, "\xD9\x98\x0B\xA2\xCC\x0F\x97\xBB"
 			"\x03\x82\x2C\x62\x11\xEA\xEA\x4A\x06\xEE\xF4\x27",
@@ -244,6 +248,14 @@ void BarSettingsRead (BarSettings_t *settings) {
 		} else if (streq ("fifo", key)) {
 			free (settings->fifo);
 			settings->fifo = strdup (val);
+		} else if (streq ("socketEnabled", key)) {
+			settings->socketEnabled = atoi (val);
+		} else if (streq ("socketIP", key)) {
+			settings->socketIP = strdup (val);
+		} else if (streq ("socketPort", key)) {
+			settings->socketPort = atoi (val);
+		} else if (streq ("socketMyDeviceName", key)) {
+			settings->socketMyDeviceName = strdup (val);
 		} else if (streq ("autoselect", key)) {
 			settings->autoselect = atoi (val);
 		} else if (streq ("force_tls", key)) {

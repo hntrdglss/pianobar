@@ -45,6 +45,7 @@ THE SOFTWARE.
 
 #include "ui.h"
 #include "ui_readline.h"
+#include "socket.h"
 
 typedef int (*BarSortFunc_t) (const void *, const void *);
 
@@ -792,6 +793,22 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 	pid_t chld;
 	int pipeFd[2];
 
+	if(isSocketAvailable) {
+		char stream[1024];
+
+		if(type == "songstart") {
+			sprintf(stream, "{device:\"%s\",event:\"%s\",payload:{music_id:\"%s\", artist:\"%s\", album:\"%s\", title:\"%s\", art:\"%s\", audio:\"%s\"}}", settings->socketMyDeviceName, type, curSong->musicId, curSong->artist, curSong->album, curSong->title, curSong->coverArt, curSong->audioUrl);
+		} else if(type == "songduration") {
+			sprintf(stream, "{device:\"%s\",event:\"%s\",payload:{music_id:\"%s\", elapsed:%i, duration:%lu}}", settings->socketMyDeviceName, type, curSong->musicId, player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR, player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR);
+		} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
+			sprintf(stream, "{device:\"%s\",event:\"%s\",payload:{music_id:\"%s\"}}", settings->socketMyDeviceName, type, curSong->musicId);
+		}
+
+		BarSocketSendMessage(stream);
+
+		stream[0] = 0;
+	}
+
 	if (settings->eventCmd == NULL) {
 		/* nothing to do... */
 		return;
@@ -841,9 +858,7 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 				"songDuration=%lu\n"
 				"songPlayed=%lu\n"
 				"rating=%i\n"
-				"detailUrl=%s\n"
-				"audioUrl=%s\n"
-				"musicId=%s\n",
+				"detailUrl=%s\n",
 				curSong == NULL ? "" : curSong->artist,
 				curSong == NULL ? "" : curSong->title,
 				curSong == NULL ? "" : curSong->album,
@@ -857,9 +872,7 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 				player->songDuration,
 				player->songPlayed,
 				curSong == NULL ? PIANO_RATE_NONE : curSong->rating,
-				curSong == NULL ? "" : curSong->detailUrl,
-				curSong == NULL ? "" : curSong->audioUrl,
-				curSong == NULL ? "" : curSong->musicId
+				curSong == NULL ? "" : curSong->detailUrl
 				);
 
 		if (stations != NULL) {

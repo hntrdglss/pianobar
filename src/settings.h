@@ -99,6 +99,10 @@ typedef struct {
 	char *npStationFormat;
 	char *listSongFormat;
 	char *fifo;
+	bool socketEnabled;
+	char *socketIP;
+	unsigned int socketPort;
+	char *socketMyDeviceName;
 	char tlsFingerprint[20];
 	char keys[BAR_KS_COUNT];
 	BarMsgFormatStr_t msgFormat[MSG_COUNT];

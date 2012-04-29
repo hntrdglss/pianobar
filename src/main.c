@@ -55,6 +55,7 @@ THE SOFTWARE.
 #include "ui.h"
 #include "ui_dispatch.h"
 #include "ui_readline.h"
+#include "socket.h"
 
 /*	copy proxy settings to waitress handle
  */
@@ -370,6 +371,8 @@ int main (int argc, char **argv) {
 	BarSettingsInit (&app.settings);
 	BarSettingsRead (&app.settings);
 
+	BarSocketInit (&app);
+
 	BarUiMsg (&app.settings, MSG_NONE,
 			"Welcome to " PACKAGE " (" VERSION ")! ");
 	if (app.settings.keys[BAR_KS_HELP] == BAR_KS_DISABLED) {
@@ -423,6 +426,7 @@ int main (int argc, char **argv) {
 	WaitressFree (&app.waith);
 	ao_shutdown();
 	gnutls_global_deinit ();
+	BarSocketDestroy();
 	BarSettingsDestroy (&app.settings);
 
 	/* restore terminal attributes, zsh doesn't need this, bash does... */

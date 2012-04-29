@@ -24,7 +24,8 @@ PIANOBAR_SRC=\
 		${PIANOBAR_DIR}/ui_act.c \
 		${PIANOBAR_DIR}/ui.c \
 		${PIANOBAR_DIR}/ui_readline.c \
-		${PIANOBAR_DIR}/ui_dispatch.c
+		${PIANOBAR_DIR}/ui_dispatch.c \
+		${PIANOBAR_DIR}/socket.c
 PIANOBAR_HDR=\
 		${PIANOBAR_DIR}/player.h \
 		${PIANOBAR_DIR}/settings.h \
@@ -33,7 +34,8 @@ PIANOBAR_HDR=\
 		${PIANOBAR_DIR}/ui.h \
 		${PIANOBAR_DIR}/ui_readline.h \
 		${PIANOBAR_DIR}/main.h \
-		${PIANOBAR_DIR}/config.h
+		${PIANOBAR_DIR}/config.h \
+		${PIANOBAR_DIR}/socket.h
 PIANOBAR_OBJ=${PIANOBAR_SRC:.c=.o}
 
 LIBPIANO_DIR=src/libpiano

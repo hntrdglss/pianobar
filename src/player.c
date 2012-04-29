@@ -51,8 +51,6 @@ THE SOFTWARE.
  * a "nice" integer */
 #define RG_SCALE_FACTOR 100
 
-FILE *bufferfile;
-
 /*	compute replaygain scale factor
  *	algo taken from here: http://www.dsprelated.com/showmessage/29246/1.php
  *	mpd does the same
@@ -322,8 +320,6 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size,
 		return WAITRESS_CB_RET_ERR;
 	}
 
-	fwrite(data, size, 1, bufferfile);
-
 	/* some "prebuffering" */
 	if (player->mode < PLAYER_RECV_DATA &&
 			player->bufferFilled < BAR_PLAYER_BUFSIZE / 2) {
@@ -452,8 +448,6 @@ void *BarPlayerThread (void *data) {
 			mad_frame_init (&player->mp3Frame);
 			mad_synth_init (&player->mp3Synth);
 
-			bufferfile = fopen("/tmp/pandora-buffer.mp3", "w");
-
 			player->waith.callback = BarPlayerMp3Cb;
 			break;
 		#endif /* ENABLE_MAD */
@@ -490,9 +484,6 @@ void *BarPlayerThread (void *data) {
 			mad_synth_finish (&player->mp3Synth);
 			mad_frame_finish (&player->mp3Frame);
 			mad_stream_finish (&player->mp3Stream);
-
-			fclose(bufferfile);
-
 			break;
 		#endif /* ENABLE_MAD */
 
