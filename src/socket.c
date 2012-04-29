@@ -23,7 +23,7 @@ void BarSocketInit(BarApp_t * app) {
 		isSocketAvailable = true;
 		int n;
 		struct sockaddr_in serv_addr;
-		char hello[] = "knock knock";
+		char hello[] = "{}";
 
 		BarUiMsg (&app->settings, MSG_NONE, "Connecting %s to %s:%i: ", app->settings.socketMyDeviceName, app->settings.socketIP, app->settings.socketPort);
 
@@ -75,6 +75,27 @@ void BarSocketDestroy() {
 void BarSocketReconnect() {
 	isSocketAvailable = false;
 	printf ("!!! Socket closed unexpectedly.\n");
+}
+
+void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
+	const PianoStation_t *curStation, const PianoSong_t *curSong,
+	const struct audioPlayer *player) {
+
+	if(isSocketAvailable) {
+		char stream[1024];
+
+		if(type == "songstart") {
+			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\", \"artist\":\"%s\", \"album\":\"%s\", \"title\":\"%s\", \"cover_art\":\"%s\", \"audio\":\"%s\"}}", settings->socketMyDeviceName, type, curSong->musicId, curSong->artist, curSong->album, curSong->title, curSong->coverArt, curSong->audioUrl);
+		} else if(type == "songduration") {
+			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\", \"seconds_elapsed\":%i, \"duration\":%lu}}", settings->socketMyDeviceName, type, curSong->musicId, player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR, player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR);
+		} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
+			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\"}}", settings->socketMyDeviceName, type, curSong->musicId);
+		}
+
+		BarSocketSendMessage(stream);
+
+		stream[0] = 0;
+	}
 }
 
 inline void BarSocketSendMessage(char * message) {

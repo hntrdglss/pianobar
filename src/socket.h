@@ -11,6 +11,8 @@
 
 #include <piano.h>
 
+#include "settings.h"
+#include "player.h"
 #include "main.h"
 
 int sockfd;
@@ -19,6 +21,8 @@ bool isSocketAvailable;
 void BarSocketInit(BarApp_t *);
 void BarSocketDestory();
 void BarSocketReconnect();
+void BarSocketCreateMessage (const BarSettings_t *, const char *,
+		const PianoStation_t *, const PianoSong_t *, const struct audioPlayer *);
 void BarSocketSendMessage (char *);
 
 #endif /* _SOCKET_H */
