@@ -17,6 +17,13 @@
 
 int sockfd;
 bool isSocketAvailable;
+struct audioPlayer *socketPlayer;
+
+typedef struct {
+	char *url; /* splitted url, unusable */
+	const char *host;
+	const char *port;
+} SocketHostPort_t;
 
 void BarSocketInit(BarApp_t *);
 void BarSocketDestory();
@@ -24,5 +31,6 @@ void BarSocketReconnect();
 void BarSocketCreateMessage (const BarSettings_t *, const char *,
 		const PianoStation_t *, const PianoSong_t *, const struct audioPlayer *);
 void BarSocketSendMessage (char *);
+static bool SocketSplitUrl (const char *, SocketHostPort_t *);
 
 #endif /* _SOCKET_H */

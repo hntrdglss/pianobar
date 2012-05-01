@@ -17,15 +17,24 @@ void BarSocketInit(BarApp_t * app) {
 	// ---------------------- SOCKET SERVER INITIALIZATION -------------------------  //
 	//------------------------------------------------------------------------------- //
 
-	// printf("attempting to connect to socket server...\n");
+	isSocketAvailable = false;
 
-	if(app->settings.socketEnabled) {
+	if(app->settings.socketHostIP != NULL) {
 		isSocketAvailable = true;
 		int n;
 		struct sockaddr_in serv_addr;
-		char hello[] = "{}";
+		char stream[1024];
 
-		BarUiMsg (&app->settings, MSG_NONE, "Connecting %s to %s:%i: ", app->settings.socketMyDeviceName, app->settings.socketIP, app->settings.socketPort);
+		socketPlayer = &app->player;
+
+		SocketHostPort_t shp;
+		memset (&shp, 0, sizeof (shp));
+		if(!SocketSplitUrl(app->settings.socketHostIP, &shp)) {
+			isSocketAvailable = false;
+			return;
+		}
+
+		BarUiMsg (&app->settings, MSG_NONE, "Connecting %s to %s:%i: ", app->settings.socketMyDeviceName, shp.host, atoi(shp.port));
 
 		/* First call to socket() function */
 		sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -38,8 +47,8 @@ void BarSocketInit(BarApp_t * app) {
 		bzero((char *) &serv_addr, sizeof(serv_addr));
 		// serv_addr.sin_family = AF_INET;
 		serv_addr.sin_family = AF_UNSPEC;
-		serv_addr.sin_addr.s_addr = inet_addr(app->settings.socketIP);
-		serv_addr.sin_port = htons(app->settings.socketPort);
+		serv_addr.sin_addr.s_addr = inet_addr(shp.host);
+		serv_addr.sin_port = htons(atoi(shp.port));
 
 		signal(SIGPIPE, BarSocketReconnect);
 
@@ -49,9 +58,11 @@ void BarSocketInit(BarApp_t * app) {
 			isSocketAvailable = false;
 		}
 
+		sprintf(stream, "{\"device\":\"%s\",\"event\":\"connect\"}", app->settings.socketMyDeviceName);
+
 		/* Write a response to the client */
 		if(isSocketAvailable) {
-			n = send(sockfd, hello, (int)strlen(hello), 0);
+			n = send(sockfd, stream, (int)strlen(stream), 0);
 		}
 		if (isSocketAvailable && n < 0) {
 			BarUiMsg (&app->settings, MSG_NONE, "error writing to socket.\n");
@@ -74,7 +85,12 @@ void BarSocketDestroy() {
 
 void BarSocketReconnect() {
 	isSocketAvailable = false;
-	printf ("!!! Socket closed unexpectedly.\n");
+	printf ("!!! Socket closed unexpectedly. Unpause music to continue listening, without socket connection.\n");
+	close(sockfd);
+
+	if (pthread_mutex_trylock (&socketPlayer->pauseMutex) == EBUSY) {
+		pthread_mutex_unlock (&socketPlayer->pauseMutex);
+	}
 }
 
 void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
@@ -85,9 +101,9 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 		char stream[1024];
 
 		if(type == "songstart") {
-			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\", \"artist\":\"%s\", \"album\":\"%s\", \"title\":\"%s\", \"cover_art\":\"%s\", \"audio\":\"%s\"}}", settings->socketMyDeviceName, type, curSong->musicId, curSong->artist, curSong->album, curSong->title, curSong->coverArt, curSong->audioUrl);
+			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\",\"station_name\":\"%s\", \"artist\":\"%s\", \"album\":\"%s\", \"title\":\"%s\", \"cover_art\":\"%s\", \"audio\":\"%s\", \"lyrics\":{\"id\":\"%s\",\"checksum\":\"%s\"}}}", settings->socketMyDeviceName, type, curSong->musicId, curStation->name, curSong->artist, curSong->album, curSong->title, curSong->coverArt, curSong->audioUrl, curSong->lyricId, curSong->lyricChecksum);
 		} else if(type == "songduration") {
-			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\", \"seconds_elapsed\":%i, \"duration\":%lu}}", settings->socketMyDeviceName, type, curSong->musicId, player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR, player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR);
+			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\", \"seconds_elapsed\":%lu, \"duration\":%lu}}", settings->socketMyDeviceName, type, curSong->musicId, player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR, player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR);
 		} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
 			sprintf(stream, "{\"device\":\"%s\",\"event\":\"%s\",\"payload\":{\"music_id\":\"%s\"}}", settings->socketMyDeviceName, type, curSong->musicId);
 		}
@@ -115,4 +131,71 @@ inline void BarSocketSendMessage(char * message) {
 		// Send data off to socket server
 		n = send( sockfd, message, (int) strlen(message), 0 );
 	}
+}
+
+/*	Split http url into host, port and path
+ *	@param url
+ *	@param returned url struct
+ *	@return url is a http url? does not say anything about its validity!
+ */
+static bool SocketSplitUrl (const char *inurl, SocketHostPort_t *retUrl) {
+	assert (inurl != NULL);
+	assert (retUrl != NULL);
+
+	enum {FIND_HOST, FIND_PORT, DONE}
+			state = FIND_HOST, newState = FIND_HOST;
+	char *url, *urlPos, *assignStart;
+	const char **assign = NULL;
+
+	url = strdup (inurl);
+	retUrl->url = url;
+
+	urlPos = url;
+	assignStart = urlPos;
+
+	if (*urlPos == '\0') {
+		state = DONE;
+	}
+
+	while (state != DONE) {
+		const char c = *urlPos;
+
+		switch (state) {
+
+			case FIND_HOST: {
+				if (c == ':') {
+					assign = &retUrl->host;
+					newState = FIND_PORT;
+				} else if (c == '\0') {
+					assign = &retUrl->host;
+					newState = DONE;
+				}
+				break;
+			}
+
+			case FIND_PORT: {
+				if (c == '\0') {
+					assign = &retUrl->port;
+					newState = DONE;
+				}
+				break;
+			}
+
+			case DONE:
+				break;
+		} /* end switch */
+
+		if (assign != NULL) {
+			*assign = assignStart;
+			*urlPos = '\0';
+			assignStart = urlPos+1;
+
+			state = newState;
+			assign = NULL;
+		}
+
+		++urlPos;
+	} /* end while */
+
+	return true;
 }

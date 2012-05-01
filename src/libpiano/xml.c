@@ -314,6 +314,10 @@ static void PianoXmlParsePlaylistCb (const char *key, const ezxml_t value,
 		song->detailUrl = strdup (valueStr);
 	} else if (strcmp ("trackToken", key) == 0) {
 		song->trackToken = strdup (valueStr);
+	} else if (strcmp ("lyricId", key) == 0) {
+		song->lyricId = strdup (valueStr);
+	} else if (strcmp ("lyricChecksum", key) == 0) {
+		song->lyricChecksum = strdup (valueStr);
 	}
 }
 

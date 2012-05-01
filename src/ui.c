@@ -793,7 +793,7 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 	pid_t chld;
 	int pipeFd[2];
 
-	if(settings->socketEnabled && isSocketAvailable) {
+	if(settings->socketHostIP != NULL && isSocketAvailable) {
 		BarSocketCreateMessage(settings, type, curStation, curSong, player);
 	}
 

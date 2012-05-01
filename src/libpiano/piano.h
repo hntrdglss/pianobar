@@ -78,6 +78,8 @@ typedef struct PianoSong {
 	char *feedbackId;
 	char *detailUrl;
 	char *trackToken;
+	char *lyricId;
+	char *lyricChecksum;
 	float fileGain;
 	PianoSongRating_t rating;
 	PianoAudioFormat_t audioFormat;
