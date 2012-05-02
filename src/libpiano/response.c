@@ -214,6 +214,8 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 				song->album = PianoJsonStrdup (s, "albumName");
 				song->title = PianoJsonStrdup (s, "songName");
 				song->trackToken = PianoJsonStrdup (s, "trackToken");
+				//song->lyricId = PianoJsonStrdup (s, "lyricId");
+				//song->lyricChecksum = PianoJsonStrdup (s, "lyricChecksum");
 				song->stationId = PianoJsonStrdup (s, "stationId");
 				song->fileGain = json_object_get_double (
 						json_object_object_get (s, "trackGain"));

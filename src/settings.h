@@ -99,6 +99,8 @@ typedef struct {
 	char *npStationFormat;
 	char *listSongFormat;
 	char *fifo;
+	char *socketHostIP;
+	char *socketMyDeviceName;
 	char *partnerUser, *partnerPassword, *device, *inkey, *outkey;
 	char tlsFingerprint[20];
 	char keys[BAR_KS_COUNT];

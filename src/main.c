@@ -55,6 +55,7 @@ THE SOFTWARE.
 #include "ui.h"
 #include "ui_dispatch.h"
 #include "ui_readline.h"
+#include "socket.h"
 
 /*	copy proxy settings to waitress handle
  */
@@ -260,6 +261,9 @@ static void BarMainPrintTime (BarApp_t *app) {
 			songRemaining / 60, songRemaining % 60,
 			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR / 60,
 			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR % 60);
+	BarUiStartEventCmd (&app->settings, "songduration",
+				app->curStation, app->playlist, &app->player, app->ph.stations,
+				PIANO_RET_OK, WAITRESS_RET_OK);
 }
 
 /*	main loop
@@ -348,6 +352,8 @@ int main (int argc, char **argv) {
 	PianoInit (&app.ph, app.settings.partnerUser, app.settings.partnerPassword,
 			app.settings.device, app.settings.inkey, app.settings.outkey);
 
+	BarSocketInit (&app);
+
 	BarUiMsg (&app.settings, MSG_NONE,
 			"Welcome to " PACKAGE " (" VERSION ")! ");
 	if (app.settings.keys[BAR_KS_HELP] == BAR_KS_DISABLED) {
@@ -401,6 +407,7 @@ int main (int argc, char **argv) {
 	WaitressFree (&app.waith);
 	ao_shutdown();
 	gnutls_global_deinit ();
+	BarSocketDestroy();
 	BarSettingsDestroy (&app.settings);
 
 	/* restore terminal attributes, zsh doesn't need this, bash does... */
