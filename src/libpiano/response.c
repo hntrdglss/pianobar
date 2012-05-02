@@ -209,7 +209,8 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 					free (song);
 					continue;
 				}
-				song->audioUrl = strdup (json_object_get_string (json_object_object_get (json_object_object_get (json_object_object_get (s, "audioUrlMap"), "highQuality"), "audioUrl")));
+
+				song->audioUrl = PianoJsonStrdup (s, "additionalAudioUrl");
 				song->artist = PianoJsonStrdup (s, "artistName");
 				song->album = PianoJsonStrdup (s, "albumName");
 				song->title = PianoJsonStrdup (s, "songName");
@@ -217,9 +218,11 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 				//song->lyricId = PianoJsonStrdup (s, "lyricId");
 				//song->lyricChecksum = PianoJsonStrdup (s, "lyricChecksum");
 				song->stationId = PianoJsonStrdup (s, "stationId");
+				song->coverArt = PianoJsonStrdup (s, "albumArtUrl");
+				song->detailUrl = PianoJsonStrdup (s, "songDetailUrl");
 				song->fileGain = json_object_get_double (
 						json_object_object_get (s, "trackGain"));
-				song->audioFormat = PIANO_AF_AACPLUS;
+				song->audioFormat = reqData->format;
 				switch (json_object_get_int (json_object_object_get (s,
 						"songRating"))) {
 					case 1:
@@ -522,20 +525,6 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 					}
 				}
 			}
-			break;
-		}
-
-		case PIANO_REQUEST_GET_SEED_SUGGESTIONS: {
-#if 0
-			/* find similar artists */
-			PianoRequestDataGetSeedSuggestions_t *reqData = req->data;
-
-			assert (req->responseData != NULL);
-			assert (reqData != NULL);
-
-			ret = PianoXmlParseSeedSuggestions (req->responseData,
-					&reqData->searchResult);
-#endif
 			break;
 		}
 
