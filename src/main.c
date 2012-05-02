@@ -55,7 +55,6 @@ THE SOFTWARE.
 #include "ui.h"
 #include "ui_dispatch.h"
 #include "ui_readline.h"
-#include "socket.h"
 
 /*	copy proxy settings to waitress handle
  */
@@ -78,31 +77,10 @@ static bool BarMainLoginUser (BarApp_t *app) {
 	WaitressReturn_t wRet;
 	PianoRequestDataLogin_t reqData;
 	bool ret;
-	WaitressHandle_t waithSync;
-	char *syncTime;
-	unsigned long int syncTimeInt;
-
-	/* skip sync step by fetching time from somewhere else */
-	WaitressInit (&waithSync);
-	WaitressSetUrl (&waithSync, "http://ridetheclown.com/s2/synctime.php");
-	if (app->settings.proxy != NULL && strlen (app->settings.proxy) > 0) {
-		WaitressSetProxy (&waithSync, app->settings.proxy);
-	}
-	wRet = WaitressFetchBuf (&waithSync, &syncTime);
-	WaitressFree (&waithSync);
-	if (wRet != WAITRESS_RET_OK) {
-		BarUiMsg (&app->settings, MSG_ERR, "Unable to sync: %s\n",
-				WaitressErrorToStr (wRet));
-		return false;
-	}
-
-	syncTimeInt = strtoul (syncTime, NULL, 0);
-	app->ph.timeOffset = time (NULL) - syncTimeInt;
-	free (syncTime);
 
 	reqData.user = app->settings.username;
 	reqData.password = app->settings.password;
-	reqData.step = 1;
+	reqData.step = 0;
 
 	BarUiMsg (&app->settings, MSG_INFO, "Login... ");
 	ret = BarUiPianoCall (app, PIANO_REQUEST_LOGIN, &reqData, &pRet, &wRet);
@@ -282,9 +260,6 @@ static void BarMainPrintTime (BarApp_t *app) {
 			songRemaining / 60, songRemaining % 60,
 			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR / 60,
 			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR % 60);
-	BarUiStartEventCmd (&app->settings, "songduration",
-				app->curStation, app->playlist, &app->player, app->ph.stations,
-				PIANO_RET_OK, WAITRESS_RET_OK);
 }
 
 /*	main loop
@@ -366,12 +341,12 @@ int main (int argc, char **argv) {
 	/* init some things */
 	ao_initialize ();
 	gnutls_global_init ();
-	PianoInit (&app.ph);
 
 	BarSettingsInit (&app.settings);
 	BarSettingsRead (&app.settings);
 
-	BarSocketInit (&app);
+	PianoInit (&app.ph, app.settings.partnerUser, app.settings.partnerPassword,
+			app.settings.device, app.settings.inkey, app.settings.outkey);
 
 	BarUiMsg (&app.settings, MSG_NONE,
 			"Welcome to " PACKAGE " (" VERSION ")! ");
@@ -426,7 +401,6 @@ int main (int argc, char **argv) {
 	WaitressFree (&app.waith);
 	ao_shutdown();
 	gnutls_global_deinit ();
-	BarSocketDestroy();
 	BarSettingsDestroy (&app.settings);
 
 	/* restore terminal attributes, zsh doesn't need this, bash does... */
