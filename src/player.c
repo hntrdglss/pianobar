@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2012
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -421,7 +421,6 @@ void *BarPlayerThread (void *data) {
 	WaitressReturn_t wRet = WAITRESS_RET_ERR;
 
 	/* init handles */
-	pthread_mutex_init (&player->pauseMutex, NULL);
 	player->waith.data = (void *) player;
 	/* extraHeaders will be initialized later */
 	player->waith.extraHeaders = extraHeaders;
@@ -429,6 +428,7 @@ void *BarPlayerThread (void *data) {
 
 	switch (player->audioFormat) {
 		#ifdef ENABLE_FAAD
+		case PIANO_AF_AACPLUS_LO:
 		case PIANO_AF_AACPLUS:
 			player->aacHandle = NeAACDecOpen();
 			/* set aac conf */
@@ -472,6 +472,7 @@ void *BarPlayerThread (void *data) {
 
 	switch (player->audioFormat) {
 		#ifdef ENABLE_FAAD
+		case PIANO_AF_AACPLUS_LO:
 		case PIANO_AF_AACPLUS:
 			NeAACDecClose(player->aacHandle);
 			free (player->sampleSize);
@@ -498,7 +499,6 @@ void *BarPlayerThread (void *data) {
 
 	ao_close(player->audioOutDevice);
 	WaitressFree (&player->waith);
-	pthread_mutex_destroy (&player->pauseMutex);
 	free (player->buffer);
 
 	player->mode = PLAYER_FINISHED_PLAYBACK;

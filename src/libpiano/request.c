@@ -42,6 +42,10 @@ THE SOFTWARE.
  */
 static const char *PianoAudioFormatToString (PianoAudioFormat_t format) {
 	switch (format) {
+		case PIANO_AF_AACPLUS_LO:
+			return "HTTP_32_AACPLUS";
+			break;
+
 		case PIANO_AF_AACPLUS:
 			return "HTTP_64_AACPLUS";
 			break;
@@ -67,6 +71,7 @@ static const char *PianoAudioFormatToString (PianoAudioFormat_t format) {
  */
 PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 		PianoRequestType_t type) {
+	PianoReturn_t ret = PIANO_RET_OK;
 	const char *jsonSendBuf;
 	const char *method = NULL;
 	json_object *j = json_object_new_object ();
@@ -170,8 +175,11 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 			
 			assert (reqData != NULL);
 			assert (reqData->trackToken != NULL);
+			assert (reqData->stationId != NULL);
 			assert (reqData->rating != PIANO_RATE_NONE);
 
+			json_object_object_add (j, "stationToken",
+					json_object_new_string (reqData->stationId));
 			json_object_object_add (j, "trackToken",
 					json_object_new_string (reqData->trackToken));
 			json_object_object_add (j, "isPositive",
@@ -408,7 +416,6 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 		case PIANO_REQUEST_RATE_SONG: {
 			/* love/ban song */
 			PianoRequestDataRateSong_t *reqData = req->data;
-			PianoReturn_t pRet;
 
 			assert (reqData != NULL);
 			assert (reqData->song != NULL);
@@ -421,12 +428,12 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 			req->data = &transformedReqData;
 
 			/* create request data (url, post data) */
-			pRet = PianoRequest (ph, req, PIANO_REQUEST_ADD_FEEDBACK);
+			ret = PianoRequest (ph, req, PIANO_REQUEST_ADD_FEEDBACK);
 			/* and reset request type/data */
 			req->type = PIANO_REQUEST_RATE_SONG;
 			req->data = reqData;
 
-			return pRet;
+			goto cleanup;
 			break;
 		}
 
@@ -434,7 +441,6 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 			/* move song to a different station, needs two requests */
 			PianoRequestDataMoveSong_t *reqData = req->data;
 			PianoRequestDataAddFeedback_t transformedReqData;
-			PianoReturn_t pRet;
 
 			assert (reqData != NULL);
 			assert (reqData->song != NULL);
@@ -458,12 +464,12 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 			}
 
 			/* create request data (url, post data) */
-			pRet = PianoRequest (ph, req, PIANO_REQUEST_ADD_FEEDBACK);
+			ret = PianoRequest (ph, req, PIANO_REQUEST_ADD_FEEDBACK);
 			/* and reset request type/data */
 			req->type = PIANO_REQUEST_MOVE_SONG;
 			req->data = reqData;
 
-			return pRet;
+			goto cleanup;
 			break;
 		}
 	}
@@ -494,13 +500,15 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 	if (encrypted) {
 		if ((req->postData = PianoEncryptString (ph->partner.out,
 				jsonSendBuf)) == NULL) {
-			return PIANO_RET_OUT_OF_MEMORY;
+			ret = PIANO_RET_OUT_OF_MEMORY;
 		}
 	} else {
 		req->postData = strdup (jsonSendBuf);
 	}
+
+cleanup:
 	json_object_put (j);
 
-	return PIANO_RET_OK;
+	return ret;
 }
 

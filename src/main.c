@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2012
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -207,6 +207,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
 		app->player.audioFormat = app->playlist->audioFormat;
 		app->player.settings = &app->settings;
+		pthread_mutex_init (&app->player.pauseMutex, NULL);
 
 		/* throw event */
 		BarUiStartEventCmd (&app->settings, "songstart",
@@ -234,6 +235,7 @@ static void BarMainPlayerCleanup (BarApp_t *app, pthread_t *playerThread) {
 	/* FIXME: pthread_join blocks everything if network connection
 	 * is hung up e.g. */
 	pthread_join (*playerThread, &threadRet);
+	pthread_mutex_destroy (&app->player.pauseMutex);
 
 	/* don't continue playback if thread reports error */
 	if (threadRet != (void *) PLAYER_RET_OK) {
@@ -297,22 +299,19 @@ static void BarMainLoop (BarApp_t *app) {
 
 		/* check whether player finished playing and start playing new
 		 * song */
-		if (app->player.mode >= PLAYER_FINISHED_PLAYBACK ||
-				app->player.mode == PLAYER_FREED) {
-			if (app->curStation != NULL) {
-				/* what's next? */
-				if (app->playlist != NULL) {
-					PianoSong_t *histsong = app->playlist;
-					app->playlist = app->playlist->next;
-					BarUiHistoryPrepend (app, histsong);
-				}
-				if (app->playlist == NULL) {
-					BarMainGetPlaylist (app);
-				}
-				/* song ready to play */
-				if (app->playlist != NULL) {
-					BarMainStartPlayback (app, &playerThread);
-				}
+		if (app->player.mode == PLAYER_FREED && app->curStation != NULL) {
+			/* what's next? */
+			if (app->playlist != NULL) {
+				PianoSong_t *histsong = app->playlist;
+				app->playlist = app->playlist->next;
+				BarUiHistoryPrepend (app, histsong);
+			}
+			if (app->playlist == NULL) {
+				BarMainGetPlaylist (app);
+			}
+			/* song ready to play */
+			if (app->playlist != NULL) {
+				BarMainStartPlayback (app, &playerThread);
 			}
 		}
 
@@ -365,7 +364,7 @@ int main (int argc, char **argv) {
 	}
 
 	WaitressInit (&app.waith);
-	app.waith.url.host = strdup (PIANO_RPC_HOST);
+	app.waith.url.host = app.settings.rpcHost;
 	app.waith.tlsFingerprint = app.settings.tlsFingerprint;
 
 	/* init fds */
