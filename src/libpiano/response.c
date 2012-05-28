@@ -210,6 +210,7 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 					continue;
 				}
 
+				song->musicId = NULL;
 				song->audioUrl = PianoJsonStrdup (s, "additionalAudioUrl");
 				song->artist = PianoJsonStrdup (s, "artistName");
 				song->album = PianoJsonStrdup (s, "albumName");
