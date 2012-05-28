@@ -59,7 +59,7 @@ void BarSocketInit(BarApp_t * app) {
 			isSocketAvailable = false;
 		}
 
-		//sprintf(stream, "{\"device\":\"%s\",\"event\":\"connect\"}", app->settings.socketMyDeviceName);
+		sprintf(stream, "{\"device\":\"%s\",\"event\":\"connect\"}", app->settings.socketMyDeviceName);
 
 		/* Write a response to the client */
 		if(isSocketAvailable) {
