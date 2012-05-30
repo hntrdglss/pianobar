@@ -171,7 +171,12 @@ static void BarMainGetPlaylist (BarApp_t *app) {
 			&reqData, &pRet, &wRet)) {
 		app->curStation = NULL;
 	} else {
-		app->playlist = reqData.retPlaylist;
+		if(app->playlist != NULL && app->playlist->next != NULL) {
+			PianoSong_t *nextSong = app->playlist->next;
+			nextSong->next = reqData.retPlaylist;
+		} else {
+			app->playlist = reqData.retPlaylist;
+		}
 		if (app->playlist == NULL) {
 			BarUiMsg (&app->settings, MSG_INFO, "No tracks left.\n");
 			app->curStation = NULL;
@@ -305,6 +310,11 @@ static void BarMainLoop (BarApp_t *app) {
 				PianoSong_t *histsong = app->playlist;
 				app->playlist = app->playlist->next;
 				BarUiHistoryPrepend (app, histsong);
+
+				PianoSong_t *nextSong = app->playlist->next;
+				if(nextSong->next == NULL) {
+					BarMainGetPlaylist (app);
+				}
 			}
 			if (app->playlist == NULL) {
 				BarMainGetPlaylist (app);
