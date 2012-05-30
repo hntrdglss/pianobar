@@ -110,37 +110,39 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 
 			json_object *payload = json_object_new_object ();
 
-		if(type == "songstart") {
-			payload = BarSocketBuildSong(curSong);
-		} else if(type == "songduration") {
-			if(curSong->musicId != NULL) {
-				json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
-			} else {
-				json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
-			}
-			json_object_object_add (payload, "seconds_elapsed", json_object_new_int (player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR));
-			json_object_object_add (payload, "duration", json_object_new_int (player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR));
-		} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
-			if(curSong->musicId != NULL) {
-				json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
-			} else {
-				json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
-			}
-		} else if(type == "stationfetchplaylist") {
-			json_object_object_add (payload, "station_name", json_object_new_string (curStation->name));
+		if(curSong != NULL) {
+			if(type == "songstart") {
+				payload = BarSocketBuildSong(curSong);
+			} else if(type == "songduration") {
+				if(curSong->musicId != NULL) {
+					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
+				} else {
+					json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
+				}
+				json_object_object_add (payload, "seconds_elapsed", json_object_new_int (player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR));
+				json_object_object_add (payload, "duration", json_object_new_int (player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR));
+			} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
+				if(curSong->musicId != NULL) {
+					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
+				} else {
+					json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
+				}
+			} else if(type == "stationfetchplaylist") {
+				json_object_object_add (payload, "station_name", json_object_new_string (curStation->name));
 
-			json_object *songs = json_object_new_array();
+				json_object *songs = json_object_new_array();
 
-			while (curSong->next != NULL) {
+				while (curSong->next != NULL) {
+					json_object_array_add (songs, BarSocketBuildSong(curSong));
+
+					curSong = curSong->next;
+				}
+
 				json_object_array_add (songs, BarSocketBuildSong(curSong));
 
-				curSong = curSong->next;
+				json_object_object_add (payload, "songs", songs);
+				// curSong->next = song;
 			}
-
-			json_object_array_add (songs, BarSocketBuildSong(curSong));
-
-			json_object_object_add (payload, "songs", songs);
-			// curSong->next = song;
 		}
 
 		json_object_object_add (jstream, "payload", payload);
