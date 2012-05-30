@@ -59,7 +59,11 @@ void BarSocketInit(BarApp_t * app) {
 			isSocketAvailable = false;
 		}
 
-		sprintf(stream, "{\"device\":\"%s\",\"event\":\"connect\"}", app->settings.socketMyDeviceName);
+		json_object *jstream = json_object_new_object ();
+			json_object_object_add (jstream, "device", json_object_new_string (app->settings.socketMyDeviceName));
+			json_object_object_add (jstream, "event", json_object_new_string("connect"));
+
+		BarSocketSendMessage(json_object_to_json_string(jstream));
 
 		/* Write a response to the client */
 		if(isSocketAvailable) {
@@ -99,7 +103,6 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 	const struct audioPlayer *player) {
 
 	if(isSocketAvailable) {
-		// char stream[2048];
 		json_object *jstream = json_object_new_object ();
 
 			json_object_object_add (jstream, "device", json_object_new_string (settings->socketMyDeviceName));
@@ -108,56 +111,7 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 			json_object *payload = json_object_new_object ();
 
 		if(type == "songstart") {
-				if(curSong->musicId != NULL) {
-					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
-				} else {
-					json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
-				}
-				json_object_object_add (payload, "station_name", json_object_new_string (curStation->name));
-				json_object_object_add (payload, "track_token", json_object_new_string (curSong->trackToken));
-				json_object_object_add (payload, "artist", json_object_new_string (curSong->artist));
-				json_object_object_add (payload, "album", json_object_new_string (curSong->album));
-				json_object_object_add (payload, "title", json_object_new_string (curSong->title));
-				if(curSong->coverArt != NULL) {
-					json_object_object_add (payload, "cover_art", json_object_new_string (curSong->coverArt));
-				} else {
-					json_object_object_add (payload, "cover_art", json_object_new_string ("(null)"));
-				}
-				json_object_object_add (payload, "audio", json_object_new_string (curSong->audioUrl));
-				json_object_object_add (payload, "detail_url", json_object_new_string (curSong->detailUrl));
-
-					json_object *lyrics = json_object_new_object ();
-						if(curSong->lyricId != NULL) {
-							json_object_object_add (lyrics, "id", json_object_new_string (curSong->lyricId));
-						} else {
-							json_object_object_add (lyrics, "id", json_object_new_string ("(null)"));
-						}
-						if(curSong->lyricChecksum != NULL) {
-							json_object_object_add (lyrics, "checksum", json_object_new_string (curSong->lyricChecksum));
-						} else {
-							json_object_object_add (lyrics, "checksum", json_object_new_string ("(null)"));
-						}
-					json_object_object_add (payload, "lyrics", lyrics);
-
-					// send next song
-					PianoSong_t *nextSong = curSong->next;
-					if (nextSong != NULL) {
-						json_object *next = json_object_new_object ();
-						json_object_object_add (next, "artist", json_object_new_string (nextSong->artist));
-						json_object_object_add (next, "album", json_object_new_string (nextSong->album));
-						json_object_object_add (next, "title", json_object_new_string (nextSong->title));
-						if(curSong->coverArt != NULL) {
-							json_object_object_add (next, "cover_art", json_object_new_string (nextSong->coverArt));
-						} else {
-							json_object_object_add (next, "cover_art", json_object_new_string ("(null)"));
-						}
-						json_object_object_add (next, "audio", json_object_new_string (nextSong->audioUrl));
-						json_object_object_add (next, "detail_url", json_object_new_string (nextSong->detailUrl));
-						//json_object_object_add (payload, "next", next);
-					} else {
-						json_object *next = json_object_new_string ("(null)");
-						//json_object_object_add (payload, "next", next);
-					}
+			payload = BarSocketBuildSong(curSong);
 		} else if(type == "songduration") {
 			if(curSong->musicId != NULL) {
 				json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
@@ -172,41 +126,98 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 			} else {
 				json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
 			}
+		} else if(type == "stationfetchplaylist") {
+			json_object_object_add (payload, "station_name", json_object_new_string (curStation->name));
+
+			json_object *songs = json_object_new_array();
+
+			while (curSong->next != NULL) {
+				json_object_array_add (songs, BarSocketBuildSong(curSong));
+
+				curSong = curSong->next;
+			}
+
+			json_object_array_add (songs, BarSocketBuildSong(curSong));
+
+			json_object_object_add (payload, "songs", songs);
+			// curSong->next = song;
 		}
 
 		json_object_object_add (jstream, "payload", payload);
 		BarSocketSendMessage(json_object_to_json_string(jstream));
-		// BarSocketSendMessage(stream);
 
-		// stream[0] = 0;
 		json_object_put (jstream);
 	}
 }
 
-inline void BarSocketSendMessage(char * message) {
+void BarSocketSendMessage(char * message) {
 	if(isSocketAvailable) {
 		int n;
 
 		// Allocate memory for the string we will send to the socket server.
 		// length will be the size of the mem allocation for the string
-		//int length = snprintf(NULL, 0, message) + 1;
+		// int length = snprintf(NULL, 0, message) + 1;
+		int length = strlen(message) + 2;
 	
 		// Character object that will store the string
-		//char * data = (char*) malloc((length) * sizeof(char));
+		char * data = (char*) malloc((length) * sizeof(char));
 	
 		// Print string in format of: [id,x,y,x,time]
-		//snprintf(data, length, message);
+		//- snprintf(data, length, message);
+
+		// data[length - 1] = '|';
 
 		isSocketAvailable = false;
-		// printf("%s\n", message);
+		// printf("length: %i\n", length);
+
+		strcpy(data, message);
+		strcat(data, "|\0");
 
 		// Send data off to socket server
-		n = send( sockfd, message, (int) strlen(message), 0 );
+		n = send( sockfd, data, length, 0 );
 
 		if(n >= 0) {
 			isSocketAvailable = true;
+			// printf("length2: %i\n", n);
 		}
+
+		free(data);
 	}
+}
+
+json_object * BarSocketBuildSong(const PianoSong_t *curSong) {
+	json_object *payload = json_object_new_object ();
+		if(curSong->musicId != NULL) {
+			json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
+		} else {
+			json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
+		}
+		json_object_object_add (payload, "track_token", json_object_new_string (curSong->trackToken));
+		json_object_object_add (payload, "artist", json_object_new_string (curSong->artist));
+		json_object_object_add (payload, "album", json_object_new_string (curSong->album));
+		json_object_object_add (payload, "title", json_object_new_string (curSong->title));
+		if(curSong->coverArt != NULL) {
+			json_object_object_add (payload, "cover_art", json_object_new_string (curSong->coverArt));
+		} else {
+			json_object_object_add (payload, "cover_art", json_object_new_string ("(null)"));
+		}
+		json_object_object_add (payload, "audio", json_object_new_string (curSong->audioUrl));
+		json_object_object_add (payload, "detail_url", json_object_new_string (curSong->detailUrl));
+
+			json_object *lyrics = json_object_new_object ();
+				if(curSong->lyricId != NULL) {
+					json_object_object_add (lyrics, "id", json_object_new_string (curSong->lyricId));
+				} else {
+					json_object_object_add (lyrics, "id", json_object_new_string ("(null)"));
+				}
+				if(curSong->lyricChecksum != NULL) {
+					json_object_object_add (lyrics, "checksum", json_object_new_string (curSong->lyricChecksum));
+				} else {
+					json_object_object_add (lyrics, "checksum", json_object_new_string ("(null)"));
+				}
+			json_object_object_add (payload, "lyrics", lyrics);
+
+	return payload;
 }
 
 /*	Split http url into host, port and path
