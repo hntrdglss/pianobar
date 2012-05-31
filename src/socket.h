@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 
 #include <piano.h>
+#include <waitress.h>
 
 #include "settings.h"
 #include "player.h"
@@ -19,6 +20,7 @@
 int sockfd;
 bool isSocketAvailable;
 struct audioPlayer *socketPlayer;
+struct WaitressHandle_t *waith;
 
 typedef struct {
 	char *url; /* splitted url, unusable */
@@ -26,6 +28,7 @@ typedef struct {
 	const char *port;
 } SocketHostPort_t;
 
+char *PianoJsonGetMusicId (char *);
 void BarSocketInit(BarApp_t *);
 void BarSocketDestory();
 void BarSocketReconnect();

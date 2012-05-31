@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include "piano.h"
 #include "piano_private.h"
 #include "crypt.h"
+#include "../socket.h"
 
 static char *PianoJsonStrdup (json_object *j, const char *key) {
 	return strdup (json_object_get_string (json_object_object_get (j, key)));
@@ -245,7 +246,7 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 					continue;
 				}
 
-				song->musicId = NULL;
+				song->musicId = PianoJsonGetMusicId(PianoJsonStrdup (s, "songExplorerUrl"));
 				song->audioUrl = PianoJsonStrdup (s, "additionalAudioUrl");
 				song->artist = PianoJsonStrdup (s, "artistName");
 				song->album = PianoJsonStrdup (s, "albumName");

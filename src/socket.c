@@ -12,6 +12,35 @@
 #include "main.h"
 #include "ui.h"
 #include "socket.h"
+#include "waitress.h"
+
+char *replace_str(char *str, char *orig, char *rep)
+{
+	static char buffer[4096];
+	char *p;
+
+	if(!(p = strstr(str, orig)))  // Is 'orig' even in 'str'?
+		return str;
+
+	strncpy(buffer, str, p-str); // Copy characters from 'str' start to 'orig' st$
+	buffer[p-str] = '\0';
+
+	sprintf(buffer+(p-str), "%s%s", rep, p+strlen(orig));
+
+	return buffer;
+}
+
+char *PianoJsonGetMusicId (char *explorerUrl) {
+	char *response;
+
+	WaitressSetUrl(&waith, replace_str(explorerUrl, "xml", "json"));
+	WaitressFetchBuf (&waith, &response);
+
+	json_object *j = json_tokener_parse (response);
+	json_object *songExplorer = json_object_object_get(j, "songExplorer");
+	
+	return strdup (json_object_get_string (json_object_object_get (songExplorer, "@musicId")));
+}
 
 void BarSocketInit(BarApp_t * app) {
 	//------------------------------------------------------------------------------- //
@@ -27,6 +56,7 @@ void BarSocketInit(BarApp_t * app) {
 		char stream[1024];
 
 		socketPlayer = &app->player;
+		waith = &app->waith;
 
 		SocketHostPort_t shp;
 		memset (&shp, 0, sizeof (shp));
@@ -141,7 +171,6 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 				json_object_array_add (songs, BarSocketBuildSong(curSong));
 
 				json_object_object_add (payload, "songs", songs);
-				// curSong->next = song;
 			}
 		}
 
@@ -163,14 +192,8 @@ void BarSocketSendMessage(char * message) {
 	
 		// Character object that will store the string
 		char * data = (char*) malloc((length) * sizeof(char));
-	
-		// Print string in format of: [id,x,y,x,time]
-		//- snprintf(data, length, message);
-
-		// data[length - 1] = '|';
 
 		isSocketAvailable = false;
-		// printf("length: %i\n", length);
 
 		strcpy(data, message);
 		strcat(data, "|\0");
@@ -180,7 +203,6 @@ void BarSocketSendMessage(char * message) {
 
 		if(n >= 0) {
 			isSocketAvailable = true;
-			// printf("length2: %i\n", n);
 		}
 
 		free(data);
