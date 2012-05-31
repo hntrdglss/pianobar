@@ -216,7 +216,6 @@ json_object * BarSocketBuildSong(const PianoSong_t *curSong) {
 		} else {
 			json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
 		}
-		json_object_object_add (payload, "track_token", json_object_new_string (curSong->trackToken));
 		json_object_object_add (payload, "artist", json_object_new_string (curSong->artist));
 		json_object_object_add (payload, "album", json_object_new_string (curSong->album));
 		json_object_object_add (payload, "title", json_object_new_string (curSong->title));
