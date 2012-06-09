@@ -361,7 +361,7 @@ int main (int argc, char **argv) {
 	PianoInit (&app.ph, app.settings.partnerUser, app.settings.partnerPassword,
 			app.settings.device, app.settings.inkey, app.settings.outkey);
 
-	BarSocketInit (&app);
+	BarSocketInit (&app.settings, &app.player, &app.waith, false);
 
 	BarUiMsg (&app.settings, MSG_NONE,
 			"Welcome to " PACKAGE " (" VERSION ")! ");

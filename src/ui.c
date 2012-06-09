@@ -743,13 +743,13 @@ size_t BarUiListSongs (const BarSettings_t *settings,
 				(filter != NULL && (BarStrCaseStr (song->artist, filter) != NULL ||
 				BarStrCaseStr (song->title, filter) != NULL))) {
 			char outstr[512];
-			const char *vals[] = {digits, song->artist, song->title,
+			const char *vals[] = {digits, song->musicId, song->artist, song->title,
 					(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon :
 					((song->rating == PIANO_RATE_BAN) ? settings->banIcon : "")};
 
 			snprintf (digits, sizeof (digits) / sizeof (*digits), "%2zu", i);
 			BarUiCustomFormat (outstr, sizeof (outstr), settings->listSongFormat,
-					"iatr", vals);
+					"imatr", vals);
 			BarUiAppendNewline (outstr, sizeof (outstr));
 			BarUiMsg (settings, MSG_LIST, "%s", outstr);
 		}

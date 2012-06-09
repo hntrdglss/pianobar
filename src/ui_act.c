@@ -686,3 +686,9 @@ BarUiActCallback(BarUiActManageStation) {
 	PianoDestroyStationInfo (&reqData.info);
 }
 
+/*	reconnect socket
+ */
+BarUiActCallback(BarUiActReconnectSocket) {
+	BarSocketReconnect();
+}
+

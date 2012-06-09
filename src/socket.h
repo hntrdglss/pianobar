@@ -20,6 +20,7 @@
 int sockfd;
 bool isSocketAvailable;
 struct audioPlayer *socketPlayer;
+struct BarSettings_t *socketSettings;
 struct WaitressHandle_t *waith;
 
 typedef struct {
@@ -29,8 +30,9 @@ typedef struct {
 } SocketHostPort_t;
 
 char *PianoJsonGetMusicId (char *);
-void BarSocketInit(BarApp_t *);
+void BarSocketInit(BarSettings_t *, struct audioPlayer *, WaitressHandle_t *, bool);
 void BarSocketDestory();
+void BarSocketDisconnect();
 void BarSocketReconnect();
 void BarSocketCreateMessage (const BarSettings_t *, const char *,
 		const PianoStation_t *, const PianoSong_t *, const struct audioPlayer *);

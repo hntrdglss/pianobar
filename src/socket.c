@@ -42,35 +42,41 @@ char *PianoJsonGetMusicId (char *explorerUrl) {
 	return strdup (json_object_get_string (json_object_object_get (songExplorer, "@musicId")));
 }
 
-void BarSocketInit(BarApp_t * app) {
+void BarSocketInit(BarSettings_t *appSettings, struct audioPlayer *appPlayer, WaitressHandle_t *appWaith, bool isReconnect) {
 	//------------------------------------------------------------------------------- //
 	// ---------------------- SOCKET SERVER INITIALIZATION -------------------------  //
 	//------------------------------------------------------------------------------- //
 
 	isSocketAvailable = false;
 
-	if(app->settings.socketHostIP != NULL) {
+	if(appSettings->socketHostIP != NULL) {
 		isSocketAvailable = true;
+
 		int n;
 		struct sockaddr_in serv_addr;
 		char stream[1024];
 
-		socketPlayer = &app->player;
-		waith = &app->waith;
+		socketPlayer = appPlayer;
+		socketSettings = appSettings;
+		if(appWaith != NULL) {
+			waith = appWaith;
+		}
 
 		SocketHostPort_t shp;
 		memset (&shp, 0, sizeof (shp));
-		if(!SocketSplitUrl(app->settings.socketHostIP, &shp)) {
+		if(!SocketSplitUrl(appSettings->socketHostIP, &shp)) {
 			isSocketAvailable = false;
 			return;
 		}
 
-		BarUiMsg (&app->settings, MSG_NONE, "Connecting %s to %s:%i: ", app->settings.socketMyDeviceName, shp.host, atoi(shp.port));
+		if(!isReconnect) {
+			BarUiMsg (appSettings, MSG_NONE, "Connecting %s to %s:%i: ", appSettings->socketMyDeviceName, shp.host, atoi(shp.port));
+		}
 
 		/* First call to socket() function */
 		sockfd = socket(AF_INET, SOCK_STREAM, 0);
 		if (sockfd < 0) {
-			BarUiMsg (&app->settings, MSG_NONE, "error opening socket.\n");
+			BarUiMsg (appSettings, MSG_NONE, "error opening socket.\n");
 			isSocketAvailable = false;
 		}
 
@@ -81,32 +87,32 @@ void BarSocketInit(BarApp_t * app) {
 		serv_addr.sin_addr.s_addr = inet_addr(shp.host);
 		serv_addr.sin_port = htons(atoi(shp.port));
 
-		signal(SIGPIPE, BarSocketReconnect);
+		signal(SIGPIPE, BarSocketDisconnect);
 
 		// connecting to socket
 		if (isSocketAvailable && connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-			BarUiMsg (&app->settings, MSG_NONE, "error connecting to socket.\n");
+			BarUiMsg (appSettings, MSG_NONE, "error connecting to socket.\n");
 			isSocketAvailable = false;
 		}
-
-		json_object *jstream = json_object_new_object ();
-			json_object_object_add (jstream, "device", json_object_new_string (app->settings.socketMyDeviceName));
-			json_object_object_add (jstream, "event", json_object_new_string("connect"));
-
-		BarSocketSendMessage(json_object_to_json_string(jstream));
 
 		/* Write a response to the client */
 		if(isSocketAvailable) {
 			n = send(sockfd, stream, (int)strlen(stream), 0);
 		}
 		if (isSocketAvailable && n < 0) {
-			BarUiMsg (&app->settings, MSG_NONE, "error writing to socket.\n");
+			BarUiMsg (appSettings, MSG_NONE, "error writing to socket.\n");
 			isSocketAvailable = false;
 		}
 
 		if(isSocketAvailable) {
-			BarUiMsg (&app->settings, MSG_NONE, "connected!\n");
+			BarUiMsg (appSettings, MSG_NONE, "connected!\n");
 		}
+
+		json_object *jstream = json_object_new_object ();
+			json_object_object_add (jstream, "device", json_object_new_string (appSettings->socketMyDeviceName));
+			json_object_object_add (jstream, "event", json_object_new_string("connect"));
+
+		BarSocketSendMessage(json_object_to_json_string(jstream));
 
 		//------------------------------------------------------------------------------- //
 		// ---------------------- END SOCKET SERVER CODE -------------------------------  //
@@ -118,13 +124,40 @@ void BarSocketDestroy() {
 	close(sockfd);
 }
 
-void BarSocketReconnect() {
+void BarSocketDisconnect() {
 	isSocketAvailable = false;
-	printf ("!!! Socket closed unexpectedly. Unpause music to continue listening, without socket connection.\n");
-	close(sockfd);
 
 	if (pthread_mutex_trylock (&socketPlayer->pauseMutex) == EBUSY) {
 		//pthread_mutex_unlock (&socketPlayer->pauseMutex);
+	}
+
+	BarUiMsg (&socketSettings, MSG_ERR, "!!! Socket closed unexpectedly.\n");
+	close(sockfd);
+
+	for(int i = 0; i < 5; i++) {
+		BarUiMsg (&socketSettings, MSG_ERR, "Attempt %i of 5: ", i + 1);
+		BarSocketReconnect();
+
+		if(isSocketAvailable) {
+			i = 5;
+		}
+		sleep(5);
+	}
+
+	if(!isSocketAvailable) {
+		BarUiMsg (&socketSettings, MSG_ERR, "!!! Unable to auto reconnect. Unpause music or press \"k\" to manually try reconnecting..\n");
+	}
+}
+
+void BarSocketReconnect() {
+	if(!isSocketAvailable) {
+		BarSocketInit(socketSettings, socketPlayer, waith, true);
+
+		if(isSocketAvailable) {
+			if (pthread_mutex_trylock (&socketPlayer->pauseMutex) == EBUSY) {
+				pthread_mutex_unlock (&socketPlayer->pauseMutex);
+			}
+		}
 	}
 }
 

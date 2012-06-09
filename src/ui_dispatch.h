@@ -69,6 +69,8 @@ static const BarUiDispatchAction_t dispatchActions[BAR_KS_COUNT] = {
 				"print information about song/station", "act_songinfo"},
 		{'j', BAR_DC_GLOBAL, BarUiActAddSharedStation, "add shared station",
 				"act_addshared"},
+		{'k', BAR_DC_GLOBAL, BarUiActReconnectSocket, "reconnects socket",
+				"act_reconnectsocket"},
 		{'m', BAR_DC_SONG, BarUiActMoveSong, "move song to different station",
 				"act_songmove"},
 		{'n', BAR_DC_GLOBAL | BAR_DC_STATION, BarUiActSkipSong, "next song",
