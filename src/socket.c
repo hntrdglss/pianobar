@@ -48,6 +48,7 @@ void BarSocketInit(BarSettings_t *appSettings, struct audioPlayer *appPlayer, Wa
 	//------------------------------------------------------------------------------- //
 
 	isSocketAvailable = false;
+	resyncPlaylist = false;
 
 	if(appSettings->socketHostIP != NULL) {
 		isSocketAvailable = true;
@@ -136,20 +137,27 @@ void BarSocketDisconnect() {
 
 	for(int i = 0; i < 5; i++) {
 		BarUiMsg (&socketSettings, MSG_ERR, "Attempt %i of 5: ", i + 1);
-		BarSocketReconnect();
+		BarSocketReconnect(false);
 
 		if(isSocketAvailable) {
 			i = 5;
+		} else {
+			sleep(5);
 		}
-		sleep(5);
 	}
 
 	if(!isSocketAvailable) {
 		BarUiMsg (&socketSettings, MSG_ERR, "!!! Unable to auto reconnect. Unpause music or press \"k\" to manually try reconnecting..\n");
+	} else {
+		resyncPlaylist = true;
 	}
 }
 
-void BarSocketReconnect() {
+void BarSocketReconnect(bool isManual) {
+	if(isManual) {
+		BarUiMsg (socketSettings, MSG_NONE, "Attempting to reconnect: ");
+	}
+
 	if(!isSocketAvailable) {
 		BarSocketInit(socketSettings, socketPlayer, waith, true);
 
@@ -158,6 +166,8 @@ void BarSocketReconnect() {
 				pthread_mutex_unlock (&socketPlayer->pauseMutex);
 			}
 		}
+	} else {
+		BarUiMsg (socketSettings, MSG_NONE, "already connected!\n");
 	}
 }
 
@@ -176,6 +186,11 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 		if(curSong != NULL) {
 			if(type == "songstart") {
 				payload = BarSocketBuildSong(curSong);
+
+				// resync
+				if(resyncPlaylist) {
+					BarSocketCreateMessage(settings, "stationfetchplaylist", curStation, curSong, player);
+				}
 			} else if(type == "songduration") {
 				if(curSong->musicId != NULL) {
 					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
@@ -184,6 +199,11 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 				}
 				json_object_object_add (payload, "seconds_elapsed", json_object_new_int (player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR));
 				json_object_object_add (payload, "duration", json_object_new_int (player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR));
+
+				// resync
+				if(resyncPlaylist) {
+					BarSocketCreateMessage(settings, "songstart", curStation, curSong, player);
+				}
 			} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
 				if(curSong->musicId != NULL) {
 					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
@@ -191,6 +211,7 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 					json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
 				}
 			} else if(type == "stationfetchplaylist") {
+				resyncPlaylist = false;
 				json_object_object_add (payload, "station_name", json_object_new_string (curStation->name));
 
 				json_object *songs = json_object_new_array();

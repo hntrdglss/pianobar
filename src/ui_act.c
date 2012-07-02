@@ -689,6 +689,6 @@ BarUiActCallback(BarUiActManageStation) {
 /*	reconnect socket
  */
 BarUiActCallback(BarUiActReconnectSocket) {
-	BarSocketReconnect();
+	BarSocketReconnect(true);
 }
 

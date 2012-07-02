@@ -19,6 +19,7 @@
 
 int sockfd;
 bool isSocketAvailable;
+bool resyncPlaylist;
 struct audioPlayer *socketPlayer;
 struct BarSettings_t *socketSettings;
 struct WaitressHandle_t *waith;
@@ -33,7 +34,7 @@ char *PianoJsonGetMusicId (char *);
 void BarSocketInit(BarSettings_t *, struct audioPlayer *, WaitressHandle_t *, bool);
 void BarSocketDestory();
 void BarSocketDisconnect();
-void BarSocketReconnect();
+void BarSocketReconnect(bool);
 void BarSocketCreateMessage (const BarSettings_t *, const char *,
 		const PianoStation_t *, const PianoSong_t *, const struct audioPlayer *);
 void BarSocketSendMessage (char *);
