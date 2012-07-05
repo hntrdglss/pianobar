@@ -146,8 +146,6 @@ void BarSocketDisconnect() {
 		}
 	}
 
-	resyncPlaylist = true;
-
 	if(!isSocketAvailable) {
 		BarUiMsg (&socketSettings, MSG_ERR, "!!! Unable to auto reconnect. Unpause music or press \"k\" to manually try reconnecting..\n");
 	}
@@ -166,6 +164,8 @@ void BarSocketReconnect(bool isManual) {
 				pthread_mutex_unlock (&socketPlayer->pauseMutex);
 			}
 		}
+
+		resyncPlaylist = true;
 	} else {
 		BarUiMsg (socketSettings, MSG_NONE, "already connected!\n");
 	}
