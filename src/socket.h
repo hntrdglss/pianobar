@@ -20,6 +20,7 @@
 int sockfd;
 bool isSocketAvailable;
 bool resyncPlaylist;
+char *authToken;
 struct audioPlayer *socketPlayer;
 struct BarSettings_t *socketSettings;
 struct WaitressHandle_t *waith;
@@ -35,6 +36,7 @@ void BarSocketInit(BarSettings_t *, struct audioPlayer *, WaitressHandle_t *, bo
 void BarSocketDestory();
 void BarSocketDisconnect();
 void BarSocketReconnect(bool);
+void BarSocketSaveAuthToken(char *);
 void BarSocketCreateMessage (const BarSettings_t *, const char *,
 		const PianoStation_t *, const PianoSong_t *, const struct audioPlayer *);
 void BarSocketSendMessage (char *);

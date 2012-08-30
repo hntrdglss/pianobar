@@ -141,13 +141,13 @@ void BarSocketDisconnect() {
 
 		if(isSocketAvailable) {
 			i = 5;
-		} else {
+		} else if(i < 4) {
 			sleep(5);
 		}
 	}
 
 	if(!isSocketAvailable) {
-		BarUiMsg (&socketSettings, MSG_ERR, "!!! Unable to auto reconnect. Unpause music or press \"k\" to manually try reconnecting..\n");
+		BarUiMsg (&socketSettings, MSG_ERR, "!!! Unable to auto reconnect. Unpause music or press \"k\" to manually try reconnecting.\n");
 	}
 }
 
@@ -169,6 +169,10 @@ void BarSocketReconnect(bool isManual) {
 	} else {
 		BarUiMsg (socketSettings, MSG_NONE, "already connected!\n");
 	}
+}
+
+void BarSocketSaveAuthToken(char *token) {
+	authToken = token;
 }
 
 void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
@@ -226,6 +230,8 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 
 				json_object_object_add (payload, "songs", songs);
 			}
+		} else if(type == "userlogin") {
+			json_object_object_add (payload, "auth_token", json_object_new_string (authToken));
 		}
 
 		json_object_object_add (jstream, "payload", payload);

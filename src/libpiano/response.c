@@ -166,6 +166,7 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 					ph->user.listenerId = PianoJsonStrdup (result, "userId");
 					ph->user.authToken = PianoJsonStrdup (result,
 							"userAuthToken");
+					BarSocketSaveAuthToken(ph->user.authToken);
 					break;
 			}
 			break;
