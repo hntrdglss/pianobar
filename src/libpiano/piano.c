@@ -121,6 +121,7 @@ void PianoDestroyPlaylist (PianoSong_t *playlist) {
 	while (curSong != NULL) {
 		free (curSong->audioUrl);
 		free (curSong->coverArt);
+		free (curSong->explorerUrl);
 		free (curSong->artist);
 		free (curSong->musicId);
 		free (curSong->title);

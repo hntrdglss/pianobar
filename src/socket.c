@@ -34,12 +34,18 @@ char *PianoJsonGetMusicId (char *explorerUrl) {
 	char *response;
 
 	WaitressSetUrl(&waith, replace_str(explorerUrl, "xml", "json"));
+
 	WaitressFetchBuf (&waith, &response);
 
-	json_object *j = json_tokener_parse (response);
-	json_object *songExplorer = json_object_object_get(j, "songExplorer");
-	
-	return strdup (json_object_get_string (json_object_object_get (songExplorer, "@musicId")));
+	if(response == "{}") {
+		return PianoJsonGetMusicId(explorerUrl);
+	} else {
+		json_object *j = json_tokener_parse (response);
+
+		json_object *songExplorer = json_object_object_get(j, "songExplorer");
+
+		return strdup (json_object_get_string (json_object_object_get (songExplorer, "@musicId")));
+	}
 }
 
 void BarSocketInit(BarSettings_t *appSettings, struct audioPlayer *appPlayer, WaitressHandle_t *appWaith, bool isReconnect) {
@@ -188,18 +194,11 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 			json_object *payload = json_object_new_object ();
 
 		if(curSong != NULL) {
-			if(type == "songstart") {
-				payload = BarSocketBuildSong(curSong);
-
-				// resync
-				if(resyncPlaylist) {
-					BarSocketCreateMessage(settings, "stationfetchplaylist", curStation, curSong, player);
-				}
-			} else if(type == "songduration") {
-				if(curSong->musicId != NULL) {
-					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
+			if(type == "songduration") {
+				if(curSong->trackToken != NULL) {
+					json_object_object_add (payload, "track_token", json_object_new_string (curSong->trackToken));
 				} else {
-					json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
+					json_object_object_add (payload, "track_token", json_object_new_string ("(null)"));
 				}
 				json_object_object_add (payload, "seconds_elapsed", json_object_new_int (player->songPlayed / BAR_PLAYER_MS_TO_S_FACTOR));
 				json_object_object_add (payload, "duration", json_object_new_int (player->songDuration / BAR_PLAYER_MS_TO_S_FACTOR));
@@ -208,11 +207,16 @@ void BarSocketCreateMessage(const BarSettings_t *settings, const char *type,
 				if(resyncPlaylist) {
 					BarSocketCreateMessage(settings, "songstart", curStation, curSong, player);
 				}
-			} else if(type == "songfinish" || type == "songbookmark" || type == "songlove") {
-				if(curSong->musicId != NULL) {
-					json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
+			} else if(type == "songstart" || type == "songfinish" || type == "songbookmark" || type == "songlove") {
+				if(curSong->trackToken != NULL) {
+					json_object_object_add (payload, "track_token", json_object_new_string (curSong->trackToken));
 				} else {
-					json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
+					json_object_object_add (payload, "track_token", json_object_new_string ("(null)"));
+				}
+
+				// resync
+				if(type == "songstart" && resyncPlaylist) {
+					BarSocketCreateMessage(settings, "stationfetchplaylist", curStation, curSong, player);
 				}
 			} else if(type == "stationfetchplaylist") {
 				resyncPlaylist = false;
@@ -271,10 +275,11 @@ void BarSocketSendMessage(char * message) {
 
 json_object * BarSocketBuildSong(const PianoSong_t *curSong) {
 	json_object *payload = json_object_new_object ();
-		if(curSong->musicId != NULL) {
-			json_object_object_add (payload, "music_id", json_object_new_string (curSong->musicId));
+
+		if(curSong->trackToken != NULL) {
+			json_object_object_add (payload, "track_token", json_object_new_string (curSong->trackToken));
 		} else {
-			json_object_object_add (payload, "music_id", json_object_new_string ("(null)"));
+			json_object_object_add (payload, "track_token", json_object_new_string ("(null)"));
 		}
 		json_object_object_add (payload, "artist", json_object_new_string (curSong->artist));
 		json_object_object_add (payload, "album", json_object_new_string (curSong->album));
@@ -284,8 +289,9 @@ json_object * BarSocketBuildSong(const PianoSong_t *curSong) {
 		} else {
 			json_object_object_add (payload, "cover_art", json_object_new_string ("(null)"));
 		}
+		json_object_object_add (payload, "explorer_url", json_object_new_string (curSong->explorerUrl));
 		json_object_object_add (payload, "audio", json_object_new_string (curSong->audioUrl));
-		json_object_object_add (payload, "detail_url", json_object_new_string (curSong->detailUrl));
+		//json_object_object_add (payload, "detail_url", json_object_new_string (curSong->detailUrl)); // not needed, part of explorer_url
 
 			json_object *lyrics = json_object_new_object ();
 				if(curSong->lyricId != NULL) {

@@ -248,7 +248,6 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 					continue;
 				}
 
-				song->musicId = PianoJsonGetMusicId(PianoJsonStrdup (s, "songExplorerUrl"));
 				/* get audio url based on selected quality */
 				static const char *qualityMap[] = {"", "lowQuality", "mediumQuality",
 						"highQuality"};
@@ -287,6 +286,7 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 				//song->lyricChecksum = PianoJsonStrdup (s, "lyricChecksum");
 				song->stationId = PianoJsonStrdup (s, "stationId");
 				song->coverArt = PianoJsonStrdup (s, "albumArtUrl");
+				song->explorerUrl = PianoJsonStrdup (s, "songExplorerUrl");
 				song->detailUrl = PianoJsonStrdup (s, "songDetailUrl");
 				song->fileGain = json_object_get_double (
 						json_object_object_get (s, "trackGain"));

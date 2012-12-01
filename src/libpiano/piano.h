@@ -80,6 +80,7 @@ typedef struct PianoSong {
 	char *album;
 	char *audioUrl;
 	char *coverArt;
+	char *explorerUrl;
 	char *musicId;
 	char *title;
 	char *seedId;
