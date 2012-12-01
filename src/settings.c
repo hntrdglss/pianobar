@@ -86,6 +86,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->proxy);
 	free (settings->username);
 	free (settings->password);
+	free (settings->passwordCmd);
 	free (settings->autostartStation);
 	free (settings->eventCmd);
 	free (settings->loveIcon);
@@ -98,6 +99,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->socketHostIP);
 	free (settings->socketMyDeviceName);
 	free (settings->rpcHost);
+	free (settings->rpcTlsPort);
 	free (settings->partnerUser);
 	free (settings->partnerPassword);
 	free (settings->device);
@@ -115,10 +117,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
  *	@return nothing yet
  */
 void BarSettingsRead (BarSettings_t *settings) {
-	char *configfiles[] = {PACKAGE "/state", PACKAGE "/config"},
-			path[PATH_MAX], key[256], val[256];
-	FILE *configfd;
-	static const char *formatMsgPrefix = "format_msg_";
+	char *configfiles[] = {PACKAGE "/state", PACKAGE "/config"};
 
 	assert (sizeof (settings->keys) / sizeof (*settings->keys) ==
 			sizeof (dispatchActions) / sizeof (*dispatchActions));
@@ -136,6 +135,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->npStationFormat = strdup ("Station \"%n\" (%i)");
 	settings->listSongFormat = strdup ("%i) %a - %t%r");
 	settings->rpcHost = strdup (PIANO_RPC_HOST);
+	settings->rpcTlsPort = NULL;
 	settings->partnerUser = strdup ("android");
 	settings->partnerPassword = strdup ("AC7IBG09A3DTSYM4R41UJWL07VLN8JI7");
 	settings->device = strdup ("android-generic");
@@ -144,8 +144,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->fifo = malloc (PATH_MAX * sizeof (*settings->fifo));
 	settings->socketMyDeviceName = strdup("localhost");
 	BarGetXdgConfigDir (PACKAGE "/ctl", settings->fifo, PATH_MAX);
-	memcpy (settings->tlsFingerprint, "\xA2\xA0\xBE\x8A\x37\x92\x39\xAE"
-			"\x2B\x2E\x71\x4C\x56\xB3\x8B\xC1\x2A\x9B\x4B\x77",
+	memcpy (settings->tlsFingerprint, "\x2D\x0A\xFD\xAF\xA1\x6F\x4B\x5C\x0A"
+			"\x43\xF3\xCB\x1D\x47\x52\xF9\x53\x55\x07\xC0",
 			sizeof (settings->tlsFingerprint));
 
 	settings->msgFormat[MSG_NONE].prefix = NULL;
@@ -169,6 +169,10 @@ void BarSettingsRead (BarSettings_t *settings) {
 
 	/* read config files */
 	for (size_t j = 0; j < sizeof (configfiles) / sizeof (*configfiles); j++) {
+		static const char *formatMsgPrefix = "format_msg_";
+		char key[256], val[256], path[PATH_MAX];
+		FILE *configfd;
+
 		BarGetXdgConfigDir (configfiles[j], path, sizeof (path));
 		if ((configfd = fopen (path, "r")) == NULL) {
 			continue;
@@ -191,9 +195,14 @@ void BarSettingsRead (BarSettings_t *settings) {
 				settings->username = strdup (val);
 			} else if (streq ("password", key)) {
 				settings->password = strdup (val);
+			} else if (streq ("password_command", key)) {
+				settings->passwordCmd = strdup (val);
 			} else if (streq ("rpc_host", key)) {
 				free (settings->rpcHost);
 				settings->rpcHost = strdup (val);
+			} else if (streq ("rpc_tls_port", key)) {
+				free (settings->rpcTlsPort);
+				settings->rpcTlsPort = strdup (val);
 			} else if (streq ("partner_user", key)) {
 				free (settings->partnerUser);
 				settings->partnerUser = strdup (val);
@@ -323,6 +332,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 				}
 			}
 		}
+
+		fclose (configfd);
 	}
 
 	/* check environment variable if proxy is not set explicitly */
@@ -332,8 +343,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->proxy = strdup (tmpProxy);
 		}
 	}
-
-	fclose (configfd);
 }
 
 /*	write statefile
